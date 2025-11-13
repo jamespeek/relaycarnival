@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set('Australia/Sydney');
+
 $env = file_get_contents(__DIR__ . "/.env");
 $lines = explode("\n",$env);
 

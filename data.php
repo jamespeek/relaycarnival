@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 $dataObj = [
     'title' => getenv('EVENT_NAME'),
+    'updated' => time(),
     'events' => []
 ];
 
