@@ -2,7 +2,7 @@
 
 ## Environment variables
 
-``
+```
 EVENT_NAME=Relay Carnival 20xx-xx
 
 API_URL=http://xxxx/api
@@ -16,4 +16,4 @@ DB_PASSWORD=xxxxx
 DB_CHARSET=utf8mb4
 
 GTAG=G-xxxxxxxxxx
-``
+```
