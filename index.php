@@ -90,6 +90,22 @@ $data = json_decode(file_get_contents('data/results.json'), true);
                 cursor: pointer;
             }
 
+            h3 {
+                font-size: 1rem;
+
+                .year {
+                    font-size: .8rem;
+                }
+
+                @media (min-width: 768px) {
+                    font-size: 1.2rem;
+
+                    .year {
+                        font-size: 1rem;
+                    }
+                }
+            }
+
             &:not(.completed) h3 {
                 color: #555;
                 font-weight: normal;
@@ -184,7 +200,7 @@ foreach ($data['events'] as $i => $event) {
     echo '</div>';
     echo '<div class="col-auto fw-normal">';
     if (isset($event['record'])) {
-        echo '<span class="d-none d-sm-inline">Record: </span>' . $event['record']['value'] . ' (' . $event['record']['year'] . ')';
+        echo '<span class="d-none d-sm-inline">Record: </span>' . $event['record']['value'] . ' <span class="year">(' . $event['record']['year'] . ')</span>';
     }
     echo '</div>';
     echo '</div>';
@@ -272,7 +288,7 @@ foreach ($data['events'] as $i => $event) {
 </main>
 
 <footer>
-    <div class="container py-3 mt-5 text-center">
+    <div class="container py-3 mt-4 text-center">
         Last updated: <?php echo date('H:i j F Y', $data['updated']) ?><br>
         &copy; <?php echo date('Y') ?> Capital Athletics
     </div>	
@@ -283,6 +299,8 @@ foreach ($data['events'] as $i => $event) {
 
     events.forEach(event => {
         event.addEventListener('click', () => {
+            if (!event.classList.contains('completed')) return;
+            
             events.forEach(e => {
                 if (e !== event) e.classList.remove('open');
             });
