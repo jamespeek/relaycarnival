@@ -90,8 +90,9 @@ $data = json_decode(file_get_contents('data/results.json'), true);
                 cursor: pointer;
             }
 
-            &:not(.completed) {
-                opacity: .5;
+            &:not(.completed) h3 {
+                color: #555;
+                font-weight: normal;
             }
 
             .details {
@@ -287,6 +288,11 @@ foreach ($data['events'] as $i => $event) {
             });
 
             event.classList.toggle('open');
+
+            event.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
         });
     });
 </script>
