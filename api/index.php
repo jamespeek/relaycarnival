@@ -164,6 +164,7 @@ function buildFinalFromHeats(array $heatsAssoc, int $tiePrecisionDp = 2): ?array
                 'resultId'   => (int)($it['resultId'] ?? 0),
                 'time'       => array_key_exists('time', $it) ? $it['time'] : null,
                 'clubs'      => $it['clubs'] ?? [],
+                'lane'       => $it['lane'] ?? null,
                 '_heatPlace' => $it['place'] ?? null,
             ];
         }
@@ -247,7 +248,7 @@ function finalFromHeatsArray(array $heats, int $tiePrecisionDp = 2): ?array {
 /** Readers (preserve duplicate clubs in slot order) */
 function fetchResultsByRace(PDO $pdo, int $raceId): array {
     $sql = "SELECT rt.id AS resultId, rt.heat, rt.place, rt.time,
-                   rc.slot, rc.clubId, c.name AS club
+                   rc.slot, rc.clubId, rc.lane, rc.lane, c.name AS club
             FROM results rt
             LEFT JOIN results_clubs rc ON rc.resultId = rt.id
             LEFT JOIN clubs c          ON c.id = rc.clubId
@@ -270,6 +271,7 @@ function fetchResultsByRace(PDO $pdo, int $raceId): array {
                 'resultId' => $rid,
                 'place'    => $row['place'] !== null ? (int)$row['place'] : null,
                 'time'     => $row['time']  !== null ? (float)$row['time']  : null,
+                'lane'     => $row['lane'] !== null ? (int)$row['lane'] : null,
                 'clubs'    => [], // push in rc.slot order; duplicates preserved
             ];
         }
@@ -305,7 +307,7 @@ function fetchAllResultsGrouped(PDO $pdo): array {
     // One pass for all results + clubs
     $resultsSql = "SELECT rr.id AS raceId, a.age, rr.gender, rr.eventId, e.event,
                           rt.id AS resultId, rt.heat, rt.place, rt.time,
-                          rc.slot, rc.clubId, c.name AS club
+                          rc.slot, rc.clubId, rc.lane, c.name AS club
                    FROM races rr
                    JOIN ages a   ON a.id = rr.ageId
                    JOIN events e ON e.id = rr.eventId
@@ -337,6 +339,7 @@ function fetchAllResultsGrouped(PDO $pdo): array {
                 'resultId' => $resId,
                 'place'    => $row['place'] !== null ? (int)$row['place'] : null,
                 'time'     => $row['time']  !== null ? (float)$row['time']  : null,
+                'lane'     => $row['lane'] !== null ? (int)$row['lane'] : null,
                 'clubs'    => [],
             ];
         }
@@ -392,6 +395,11 @@ function replaceResultsSet(PDO $pdo, int $raceId, int $heat, array $items): arra
         if (isset($it['time']) && $it['time'] !== null && !is_numeric($it['time'])) {
             throw new InvalidArgumentException("results[$i].time must be a number or null");
         }
+
+        if (isset($it['lane']) && $it['lane'] !== null &&
+            !is_int($it['lane']) && !ctype_digit((string)$it['lane'])) {
+            throw new InvalidArgumentException("results[$i].lane must be an integer or null");
+        }
     }
 
     $pdo->beginTransaction();
@@ -412,8 +420,8 @@ function replaceResultsSet(PDO $pdo, int $raceId, int $heat, array $items): arra
              VALUES (:r, :h, :p, :t)"
         );
         $insRC = $pdo->prepare(
-            "INSERT INTO results_clubs (resultId, slot, clubId)
-             VALUES (:rid, :slot, :cid)"
+            "INSERT INTO results_clubs (resultId, slot, clubId, lane)
+             VALUES (:rid, :slot, :cid, :lane)"
         );
 
         foreach ($items as $it) {
@@ -429,6 +437,9 @@ function replaceResultsSet(PDO $pdo, int $raceId, int $heat, array $items): arra
             if (count($clubs) > 4) {
                 throw new InvalidArgumentException("results item has more than 4 clubs");
             }
+
+            $lane = isset($it['lane']) && $it['lane'] !== null ? (int)$it['lane'] : null;
+
             $slot = 1; // reset per result
             foreach ($clubs as $cidRaw) {
                 if ($slot > 4) break;
@@ -438,6 +449,7 @@ function replaceResultsSet(PDO $pdo, int $raceId, int $heat, array $items): arra
                     ':rid'  => $rid,
                     ':slot' => $slot++,
                     ':cid'  => $cid,
+                    ':lane' => $lane
                 ]);
             }
         }

@@ -136,7 +136,7 @@
 
     <div class="controls">
       <div class="left">
-        <button id="saveBtn"   class="btn btn-primary">Save Results</button>
+        <button id="saveBtn" class="btn btn-primary">Save Results</button>
         <button id="deleteBtn" class="btn btn-danger hidden">Delete Heat</button>
       </div>
       <div class="spacer"></div>
@@ -304,16 +304,28 @@
 
   function populateFromResults(heats, heat) {
     clearFormValues();
+
     const h = heats.find(x => Number(x.heat) === Number(heat));
     const has = h && Array.isArray(h.results) && h.results.length > 0;
     deleteBtn.classList.toggle('hidden', !has);
 
     if (!has) return;
 
-    const rows = rowsBody.querySelectorAll('tr');
-    for (let i = 0; i < rows.length && i < h.results.length; i++) {
-      const res = h.results[i];
-      const tr = rows[i];
+    const rows = Array.from(rowsBody.querySelectorAll('tr'));
+    const maxLane = rows.length;
+
+    // place each result into the row that matches its lane
+    for (const res of h.results) {
+      let lane = (res.lane !== undefined && res.lane !== null)
+        ? Number(res.lane)
+        : null;
+
+      if (!lane || lane < 1 || lane > maxLane) {
+        // if lane is missing or invalid, skip (or you could fall back to the first free row)
+        continue;
+      }
+
+      const tr = rows[lane - 1];
 
       // clubs
       const clubs = (res.clubs || []).map(c => c.id);
@@ -334,8 +346,8 @@
         const secs = Number(res.time);
         if (!Number.isNaN(secs) && secs >= 60) {
           const mm = Math.floor(secs / 60);
-          const ss = secs - mm*60;
-          inp.value = `${mm}:${ss.toFixed(2).padStart(5,'0')}`;
+          const ss = secs - mm * 60;
+          inp.value = `${mm}:${ss.toFixed(2).padStart(5, '0')}`;
         } else if (!Number.isNaN(secs)) {
           inp.value = secs.toFixed(2);
         } else {
@@ -351,7 +363,11 @@
     const results = [];
     let invalidMsg = null;
 
-    rowsBody.querySelectorAll('tr').forEach(tr => {
+    const rows = Array.from(rowsBody.querySelectorAll('tr'));
+
+    rows.forEach((tr, idx) => {
+      const lane = idx + 1; // lane 1 = first row, lane 2 = second, ...
+
       const slots = [];
       for (let s = 1; s <= 4; s++) {
         const sel = tr.querySelector(`select[data-slot="${s}"]`);
@@ -362,7 +378,9 @@
 
       const selPlace = tr.querySelector('td.place-cell select');
       let place = null;
-      if (selPlace.value !== '' && selPlace.value !== 'DNF') place = Number(selPlace.value);
+      if (selPlace.value !== '' && selPlace.value !== 'DNF') {
+        place = Number(selPlace.value);
+      }
 
       const inp = tr.querySelector('td.time-cell input');
       const t = inp.value.trim();
@@ -374,10 +392,17 @@
         inp.classList.remove('invalid');
       }
 
-      results.push({ place, time: seconds, clubs: slots.slice(0,4) });
+      results.push({
+        lane,                            // 🔹 send lane
+        place,
+        time: seconds,
+        clubs: slots.slice(0, 4)
+      });
     });
 
-    if (invalidMsg) return { error: invalidMsg };
+    if (invalidMsg) {
+      return { error: invalidMsg };
+    }
     return { payload: { raceId, heat, results } };
   }
 

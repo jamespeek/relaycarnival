@@ -63,6 +63,7 @@ CREATE TABLE `results_clubs` (
   `resultId` int NOT NULL,
   `slot` tinyint NOT NULL,
   `clubId` int NOT NULL,
+  `lane` tinyint DEFAULT NULL,
   PRIMARY KEY (`resultId`,`slot`),
   KEY `resultId` (`resultId`),
   KEY `clubId` (`clubId`)
