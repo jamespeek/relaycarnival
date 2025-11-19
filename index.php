@@ -35,7 +35,7 @@ $data = json_decode(file_get_contents('data/results.json'), true);
         }
 
         header, footer { color: #fff; background-color: var(--bs-primary); }
-        h1 { font-size: 1.8rem }
+        h1 { font-size: 1.8rem; text-align: center }
         h2 { font-size: 1.6rem }
         h3 { font-size: 1.2rem }
 
@@ -87,7 +87,7 @@ $data = json_decode(file_get_contents('data/results.json'), true);
         }
 
         .event {
-            & {
+            h3 {
                 cursor: pointer;
             }
 
@@ -327,19 +327,21 @@ foreach ($data['events'] as $i => $event) {
 </footer>
 
 <script>
-    const events = document.querySelectorAll('.event');
+    const events = document.querySelectorAll('.event h3');
 
     events.forEach(event => {
         event.addEventListener('click', () => {
             // if (!event.classList.contains('completed')) return;
             
             events.forEach(e => {
-                if (e !== event) e.classList.remove('open');
+                if (e !== event) e.closest('.event').classList.remove('open');
             });
 
-            event.classList.toggle('open');
+            const parentEvent = event.closest('.event');
 
-            event.scrollIntoView({
+            parentEvent.classList.toggle('open');
+
+            parentEvent.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
             });
