@@ -90,7 +90,7 @@ foreach ($data['data'] as $counter => $raceBlock) {
         ];
     }
 
-    if ($raceBlock['heats'] && $raceBlock['heats'][0] && $raceBlock['heats'][0]['results'][0]['time']) {
+    if ($raceBlock['heats'] && $raceBlock['heats'][0]) {
         if (count($raceBlock['heats']) > 1) {
             $eventObj['heats'] = [];
 
@@ -123,47 +123,58 @@ foreach ($data['data'] as $counter => $raceBlock) {
         }
 
         // final
-        $finalObj = [];
-        foreach ($raceBlock['final']['results'] as $result) {
-            $clubs = array_column($result['clubs'], 'name');
+		$finalObj = [];
+		$hasResults = false;
+		
+		foreach ($raceBlock['final']['results'] as $result) {
+			if ($result['time']) {
+				$hasResults = true;
+				break;
+			}
+		}
 
-            $resultObj = [];
-            $resultObj['place'] = $result['place'] ? addOrdinalSuffix($result['place']) : 'X';
-            $resultObj['clubs'] = formatClubList($clubs);
+		if ($hasResults) {
+			foreach ($raceBlock['final']['results'] as $result) {
+				$clubs = array_column($result['clubs'], 'name');
 
-            if ($result['time']) {
-                $resultObj['time'] = formatTime($result['time'] + $timeAdjustment);
+				$resultObj = [];
+				$resultObj['place'] = $result['place'] ? addOrdinalSuffix($result['place']) : 'X';
+				$resultObj['clubs'] = formatClubList($clubs);
 
-                if (isset($recordsMap[$eventName]) && $result['time'] <= $recordsMap[$eventName]['record']) {
-                    $resultObj['record'] = true;
-                }
-            }
+				if ($result['time']) {
+					$resultObj['time'] = formatTime($result['time'] + $timeAdjustment);
 
-            $finalObj[] = $resultObj;
+					if (isset($recordsMap[$eventName]) && $result['time'] <= $recordsMap[$eventName]['record']) {
+						$resultObj['record'] = true;
+					}
+				}
 
-            if ($result['place'] == null || $result['place'] > 12) {
-                $points_per_club = 1 / 4;
-            } else {
-                $points_per_club = $pointsLookup[$result['place']-1] / 4;
-            }
+				$finalObj[] = $resultObj;
 
-            foreach ($clubs as $i => $club) {
-                if (!isset($clubsScore[$club])) $clubsScore[$club] = 0;
-                if (!isset($raceClubs[$club])) $raceClubs[$club] = ['count' => 0, 'points' => 0];
+				if ($result['place'] == null || $result['place'] > 12) {
+					$points_per_club = 1 / 4;
+				} else {
+					$points_per_club = $pointsLookup[$result['place']-1] / 4;
+				}
 
-                $copies = count($clubs) == 1 ? 4 : (count($clubs) == 2 ? 2 : 1);
-                $copies = min(4 - $raceClubs[$club]['count'], $copies);
-                
-                $points = $raceClubs[$club]['count'] < 4 ? $copies * $points_per_club : 0;
-                $points = number_format($points, 2);
+				foreach ($clubs as $i => $club) {
+					if (!isset($clubsScore[$club])) $clubsScore[$club] = 0;
+					if (!isset($raceClubs[$club])) $raceClubs[$club] = ['count' => 0, 'points' => 0];
 
-                $clubsScore[$club] += $points;
-                $raceClubs[$club]['count'] += $copies;
-                $raceClubs[$club]['points'] += $points;
-            }
-        }
+					$copies = count($clubs) == 1 ? 4 : (count($clubs) == 2 ? 2 : 1);
+					$copies = min(4 - $raceClubs[$club]['count'], $copies);
 
-        if ($finalObj) $eventObj['final'] = $finalObj;
+					$points = $raceClubs[$club]['count'] < 4 ? $copies * $points_per_club : 0;
+					$points = number_format($points, 2);
+
+					$clubsScore[$club] += $points;
+					$raceClubs[$club]['count'] += $copies;
+					$raceClubs[$club]['points'] += $points;
+				}
+
+				$eventObj['final'] = $finalObj;
+			}
+		}
 
         uasort($raceClubs, function ($a, $b) {
             return $b['points'] <=> $a['points'];
