@@ -19,7 +19,8 @@ if (($fh = fopen($csvFile, 'r')) !== false) {
         $key = trim($row[0]);
         $timeStr = trim($row[1]);
         $dateStr = trim($row[2]);
-        $recordsMap[$key] = ['record' => parseTimeToSeconds($timeStr), 'date' => $dateStr];
+        $clubStr = trim($row[3]);
+        $recordsMap[$key] = ['record' => parseTimeToSeconds($timeStr), 'date' => $dateStr, 'club' => $clubStr];
     }
     fclose($fh);
 }
@@ -86,12 +87,21 @@ foreach ($data['data'] as $counter => $raceBlock) {
     if (isset($recordsMap[$eventName])) {
         $eventObj['record'] = [
             'value' => formatTime($recordsMap[$eventName]['record']),
-            'year' => $recordsMap[$eventName]['date']
+            'year' => $recordsMap[$eventName]['date'],
+            'club' => $recordsMap[$eventName]['club']
         ];
     }
 
+    $hasResults = false;
+    foreach ($raceBlock['final']['results'] as $result) {
+        if ($result['time']) {
+            $hasResults = true;
+            break;
+        }
+    }
+
     if ($raceBlock['heats'] && $raceBlock['heats'][0]) {
-        if (count($raceBlock['heats']) > 1) {
+        if (count($raceBlock['heats']) > 1 || !$hasResults) {
             $eventObj['heats'] = [];
 
             foreach ($raceBlock['heats'] as $heat) {
@@ -104,6 +114,7 @@ foreach ($data['data'] as $counter => $raceBlock) {
                     $clubs = array_column($result['clubs'], 'name');
 
                     $resultObj = [];
+                    $resultObj['lane'] = $result['lane'];
                     $resultObj['place'] = $result['place'] ? addOrdinalSuffix($result['place']) : 'X';
                     $resultObj['clubs'] = formatClubList($clubs);
 
@@ -123,17 +134,9 @@ foreach ($data['data'] as $counter => $raceBlock) {
         }
 
         // final
-		$finalObj = [];
-		$hasResults = false;
-		
-		foreach ($raceBlock['final']['results'] as $result) {
-			if ($result['time']) {
-				$hasResults = true;
-				break;
-			}
-		}
-
 		if ($hasResults) {
+            $finalObj = [];
+
 			foreach ($raceBlock['final']['results'] as $result) {
 				$clubs = array_column($result['clubs'], 'name');
 

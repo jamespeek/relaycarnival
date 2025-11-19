@@ -87,7 +87,7 @@ $data = json_decode(file_get_contents('data/results.json'), true);
         }
 
         .event {
-            &.completed {
+            & {
                 cursor: pointer;
             }
 
@@ -181,15 +181,16 @@ echo '<h2>Event results</h2>';
 echo '<a href="#session-1">Session 1</a> &bull; <a href="#session-2">Session 2</a>&bull; <a href="#session-3">Session 3</a>';
 
 $session = 1;
+$lastCompleted = false;
 
 foreach ($data['events'] as $i => $event) {
-    $completed = isset($event['heats']) || isset($event['final']);
+    $completed = isset($event['final']);
 
     if ($i == 0 || $i == 18 || $i == 42) {
         echo '<h3 class="mt-3" id="session-' . $session . '">Session ' . $session++ . '</h3>';
     }
 
-    echo '<div class="event ' . ($completed ? 'completed' : '') . '">';
+    echo '<div class="event ' . ($completed ? 'completed' : 'pending') . '">';
 
     echo '<h3>';
     echo '<div class="row">';
@@ -197,19 +198,26 @@ foreach ($data['events'] as $i => $event) {
     echo $event['name'];
     if ($completed) {
         echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-success" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="m10.6 16.6l7.05-7.05l-1.4-1.4l-5.65 5.65l-2.85-2.85l-1.4 1.4zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>';
+    } else if ($lastCompleted) {
+        echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-muted" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M7 13.5q.625 0 1.063-.437T8.5 12t-.437-1.062T7 10.5t-1.062.438T5.5 12t.438 1.063T7 13.5m5 0q.625 0 1.063-.437T13.5 12t-.437-1.062T12 10.5t-1.062.438T10.5 12t.438 1.063T12 13.5m5 0q.625 0 1.063-.437T18.5 12t-.437-1.062T17 10.5t-1.062.438T15.5 12t.438 1.063T17 13.5M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>';
     }
     echo '</div>';
     echo '<div class="col-auto fw-normal">';
     if (isset($event['record'])) {
-        echo '<span class="d-none d-sm-inline">Record: </span>' . $event['record']['value'] . ' <span class="year">(' . $event['record']['year'] . ')</span>';
+        echo $event['record']['value'];
+        echo ' <span class="year">(';
+        echo '<span class="d-none d-md-inline">' . $event['record']['club'] . '</span>';
+        echo '<span class="d-inline d-md-none text-uppercase">' . substr($event['record']['club'], 0, 3) . '</span>';
+        echo ' ' . $event['record']['year'];
+        echo ')</span>';
     }
     echo '</div>';
     echo '</div>';
     echo '</h3>';
 
-    if ($completed) {
-        echo '<div class="row details mb-3">';
+    echo '<div class="row details mb-3">';
 
+    if ($completed) {
         echo '<div class="col-md-7">';
 
         if (isset($event['heats'])) {
@@ -277,11 +285,34 @@ foreach ($data['events'] as $i => $event) {
         }
         echo '</ul>';
         echo '</div>'; // col
+    } else {
+        if (isset($event['heats'])) {
+            echo '<div class="col-md-7">';
 
-        echo '</div>'; // row
+            foreach ($event['heats'] as $heat) {
+                echo '<ul class="list-group mb-3">';
+                echo '<li class="list-group-item active px-2 py-1">Lane&nbsp;&nbsp;' . (count($event['heats']) > 1 ? $heat['name'] : 'Final') . '</li>';
+                foreach ($heat['results'] as $result) {
+                    echo '<li class="list-group-item p-1">';
+                    echo '<div class="row justify-content-between">';
+                    echo '<div class="col-1 text-center"><span class="badge rounded-pill text-bg-secondary">' . $result['lane'] . '</span></div>';
+                    
+                    echo '<div class="col">' . $result['clubs'] . '</div>';
+                    
+                    echo '</div>';
+                    echo '</li>';
+                }
+                echo '</ul>';
+            }
+
+            echo '</div>'; // col
+        }
     }
-    
+
+    echo '</div>'; // row
     echo '</div>'; // event
+
+    $lastCompleted = $completed;
 }
 
 ?>
@@ -300,7 +331,7 @@ foreach ($data['events'] as $i => $event) {
 
     events.forEach(event => {
         event.addEventListener('click', () => {
-            if (!event.classList.contains('completed')) return;
+            // if (!event.classList.contains('completed')) return;
             
             events.forEach(e => {
                 if (e !== event) e.classList.remove('open');
