@@ -2,7 +2,7 @@
 
 include_once 'utils.php';
 
-if (isset($_GET['refresh']) && $_GET['refresh'] == getenv('SYNC_KEY')) {
+if (hash_equals(getenv('SYNC_KEY'), $_GET['refresh'] ?? '') || $_SERVER['SERVER_NAME'] == 'dev.peek.net.au') {
     $json = file_get_contents(getenv('JSON_URL'));
     file_put_contents('data/results.json', $json);
 }
@@ -119,6 +119,49 @@ $data = json_decode(file_get_contents('data/results.json'), true);
             &.open .details {
                 display: flex;
             }
+
+            &.pending {
+                .list-group-item .badge {
+                    color: #000;
+
+                    &[data-lane="1"] {
+                        color: #fff;
+                        background-color: red;
+                    }
+                    &[data-lane="2"] {
+                        background-color: pink;
+                    }
+                    &[data-lane="3"] {
+                        background-color: yellow;
+                        border: 1px solid #ffcc00;
+                    }
+                    &[data-lane="4"] {
+                        background-color: purple;
+                        color: #fff;
+                    }
+                    &[data-lane="5"] {
+                        background-color: white;
+                        border: 1px solid silver;
+                    }
+                    &[data-lane="6"] {
+                        background-color: orange;
+                    }
+                    &[data-lane="7"] {
+                        background-color: black;
+                        color: #fff;
+                    }
+                    &[data-lane="8"] {
+                        background-color: green;
+                        color: #fff;
+                    }
+                    &[data-lane="9"] {
+                        background-color: silver;
+                    }
+                    &[data-lane="10"] {
+                        background-color: lightblue;
+                    }
+                }
+            }
         }
 
         @media print {
@@ -178,7 +221,7 @@ if (isset($data['points'])) {
 
 echo '<h2>Event results</h2>';
 
-echo '<a href="#session-1">Session 1</a> &bull; <a href="#session-2">Session 2</a>&bull; <a href="#session-3">Session 3</a>';
+echo '<a href="#session-1">Session 1</a> &bull; <a href="#session-2">Session 2</a> &bull; <a href="#session-3">Session 3</a>';
 
 $session = 1;
 $lastCompleted = false;
@@ -287,15 +330,15 @@ foreach ($data['events'] as $i => $event) {
         echo '</div>'; // col
     } else {
         if (isset($event['heats'])) {
-            echo '<div class="col-md-7">';
-
             foreach ($event['heats'] as $heat) {
+                echo '<div class="col-md-6">';
+
                 echo '<ul class="list-group mb-3">';
                 echo '<li class="list-group-item active px-2 py-1">Lane&nbsp;&nbsp;' . (count($event['heats']) > 1 ? $heat['name'] : 'Final') . '</li>';
                 foreach ($heat['results'] as $result) {
                     echo '<li class="list-group-item p-1">';
                     echo '<div class="row justify-content-between">';
-                    echo '<div class="col-1 text-center"><span class="badge rounded-pill text-bg-secondary">' . $result['lane'] . '</span></div>';
+                    echo '<div class="col-1 text-center"><span class="badge rounded-pill" data-lane="' . $result['lane'] . '">' . $result['lane'] . '</span></div>';
                     
                     echo '<div class="col">' . $result['clubs'] . '</div>';
                     
@@ -303,9 +346,9 @@ foreach ($data['events'] as $i => $event) {
                     echo '</li>';
                 }
                 echo '</ul>';
-            }
 
-            echo '</div>'; // col
+                echo '</div>'; // col
+            }
         }
     }
 
