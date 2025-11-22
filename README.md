@@ -2,7 +2,7 @@
 
 ## Files audit
 
-* `index.php` User-facing results page, loads data via `./data/results.json` and triggers regenerate when in dev or when `result` query argument supplied with correct key.
+* `index.php` User-facing results page, loads data via `./data/results.json` and triggers regenerate when in dev or when `refresh` query argument supplied with correct key.
 * `data.php` Uses the API to `GET /results` and transform it into a single JSON file with score calculations and tally table included.
 * `utils.php` Variety of env, string and database utilities that are used between files.
 * `results.php` Single page entry results screen.
