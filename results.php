@@ -409,11 +409,11 @@
   // ===== API =====
   async function loadClubs() {
     const data = await fetchJSON(EP.clubs());
-    state.clubs = Array.isArray(data) ? data : (data.data || []);
+    state.clubs = Array.isArray(data) ? data : (data || []);
   }
   async function loadRaces() {
     const data = await fetchJSON(EP.races());
-    state.races = data.data || [];
+    state.races = data || [];
     raceSelect.innerHTML = '';
     for (const r of state.races) {
       const opt = document.createElement('option');
@@ -423,7 +423,7 @@
   }
   async function loadHeats(raceId) {
     const data = await fetchJSON(EP.results(raceId));
-    return data.data?.heats || [];
+    return data.heats || [];
   }
 
   async function saveResults() {

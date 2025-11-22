@@ -374,8 +374,6 @@ foreach ($data['events'] as $i => $event) {
 
     events.forEach(event => {
         event.addEventListener('click', () => {
-            // if (!event.classList.contains('completed')) return;
-            
             events.forEach(e => {
                 if (e !== event) e.closest('.event').classList.remove('open');
             });

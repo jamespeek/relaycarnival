@@ -1,10 +1,14 @@
 <?php
 
-include_once 'utils.php';
+require_once __DIR__ . '/utils.php';
 
-header('Content-Type: application/json; charset=utf-8');
+define('INSIDE_API_INCLUDE', true);
+require_once __DIR__ . '/api/index.php';
 
-$dataObj = [
+$pdo = init_db();
+$results = fetchAllResultsGrouped($pdo);
+
+$jsonObj = [
     'title' => getenv('EVENT_NAME'),
     'updated' => time(),
     'events' => []
@@ -25,31 +29,12 @@ if (($fh = fopen($csvFile, 'r')) !== false) {
     fclose($fh);
 }
 
-$apiUrl = getenv('API_URL') . '/results';
-
-// --- fetch the API response ---
-$response = @file_get_contents($apiUrl);
-
-if ($response === false) {
-    die(json_encode(['error' => 'Unable to connect to API']));
-}
-
-$data = json_decode($response, true);
-
-if (json_last_error() !== JSON_ERROR_NONE) {
-    die(json_encode(['error' => 'Invalid API response']));
-}
-
-if (!isset($data['data']) || !is_array($data['data'])) {
-die(json_encode(['error' => 'Invalid API response']));
-}
-
 $pointsLookup = [13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 $clubsScore = [];
 
 $heatLetters = ['A', 'B', 'C'];
 
-foreach ($data['data'] as $counter => $raceBlock) {
+foreach ($results as $counter => $raceBlock) {
     if (!isset($raceBlock['race'])) continue;
 
     $race = $raceBlock['race'];
@@ -114,8 +99,11 @@ foreach ($data['data'] as $counter => $raceBlock) {
                     $clubs = array_column($result['clubs'], 'name');
 
                     $resultObj = [];
-                    $resultObj['lane'] = $result['lane'];
-                    $resultObj['place'] = $result['place'] ? addOrdinalSuffix($result['place']) : 'X';
+                    if ($hasResults) {
+                        $resultObj['place'] = $result['place'] ? addOrdinalSuffix($result['place']) : 'X';
+                    } else {
+                        $resultObj['lane'] = $result['lane'];
+                    }
                     $resultObj['clubs'] = formatClubList($clubs);
 
                     if ($result['time']) {
@@ -191,77 +179,19 @@ foreach ($data['data'] as $counter => $raceBlock) {
         if ($pointsObj) $eventObj['points'] = $pointsObj;
     }
 
-    $dataObj['events'][] = $eventObj;
+    $jsonObj['events'][] = $eventObj;
 }
 
 if (count($clubsScore)) {
     arsort($clubsScore);
 
-    $dataObj['points'] = [];
+    $jsonObj['points'] = [];
 
     foreach ($clubsScore as $club => $score) {
-        $dataObj['points'][] = ['club' => $club, 'points' => number_format($score, 2)];
+        $jsonObj['points'][] = ['club' => $club, 'points' => number_format($score, 2)];
     }
 }
 
-echo json_encode($dataObj);
+header('Content-Type: application/json; charset=utf-8');
 
-function addOrdinalSuffix ($num) {
-    if (!in_array($num % 100, [11, 12, 13])) {
-        switch ($num % 10) {
-            case 1: return $num . 'st';
-            case 2: return $num . 'nd';
-            case 3: return $num . 'rd';
-        }
-    }
-    return $num . 'th';
-}
-
-function formatClubList($clubs) {
-    // Count occurrences
-    $counts = array_count_values($clubs);
-
-    // Unique club names
-    $unique = array_keys($counts);
-
-    // Sort: highest count first, then alphabetically
-    usort($unique, function($a, $b) use ($counts) {
-        $diff = $counts[$b] - $counts[$a];
-        return $diff !== 0 ? $diff : strcasecmp($a, $b);
-    });
-
-    // Build formatted output
-    $formatted = array_map(function($name) use ($counts) {
-        return $counts[$name] > 1 ? "{$name}&nbsp;x&nbsp;{$counts[$name]}" : $name;
-    }, $unique);
-
-    return implode(', ', $formatted);
-}
-
-function formatTime(float $seconds): string {
-    if ($seconds < 60) {
-        return number_format($seconds, 2) . 's';
-    }
-
-    $minutes = floor($seconds / 60);
-    $remainder = $seconds - ($minutes * 60);
-    // Always show two digits for seconds, and two decimal places for fractions
-    return sprintf("%d:%05.2fs", $minutes, $remainder);
-}
-
-function parseTimeToSeconds(string $s): float {
-    $s = trim($s);
-    if ($s === '') return 0.0;
-
-    // Use dot as decimal separator (in case of locales)
-    $s = str_replace(',', '.', $s);
-
-    if (strpos($s, ':') !== false) {
-        // "mm:ss.ms"
-        [$m, $sec] = array_pad(explode(':', $s, 2), 2, '0');
-        return ((int)$m) * 60 + (float)$sec;
-    }
-
-    // "ss.ms" or "ss"
-    return (float)$s;
-}
+echo json_encode($jsonObj);

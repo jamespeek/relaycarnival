@@ -22,11 +22,9 @@
  *
  * Responses (POST + GET single + GET all):
  *   {
- *     "data": {
- *       "race": { id, age, gender, eventId, event },
- *       "heats": [ { "heat": 1, "results":[ {resultId, place, time, clubs:[{id,name}...]} ] }, ... ],
- *       "final": { "results":[ {place, time, heat, resultId, clubs:[{id,name}...]}, ... ] }   // only when >= 2 heats
- *     }
+ *     "race": { id, age, gender, eventId, event },
+ *     "heats": [ { "heat": 1, "results":[ {resultId, place, time, clubs:[{id,name}...]} ] }, ... ],
+ *     "final": { "results":[ {place, time, heat, resultId, clubs:[{id,name}...]}, ... ] }   // only when >= 2 heats
  *   }
  *
  * CORS enabled; all inputs/outputs JSON.
@@ -34,14 +32,7 @@
 
 declare(strict_types=1);
 
-include_once '../utils.php';
-
-// ===================== CONFIG =====================
-$dbHost = getenv('DB_HOST');
-$dbName = getenv('DB_NAME');
-$dbUser = getenv('DB_USERNAME');
-$dbPass = getenv('DB_PASSWORD');
-$dbCharset = getenv('DB_CHARSET');
+require_once __DIR__ . '/../utils.php';
 
 // ===================== BOOTSTRAP =====================
 header('Content-Type: application/json; charset=utf-8');
@@ -69,25 +60,7 @@ function read_json_body(): array {
     return is_array($data) ? $data : [];
 }
 
-try {
-    $dsn = "mysql:host={$dbHost};dbname={$dbName};charset={$dbCharset}";
-    $pdo = new PDO($dsn, $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-} catch (Throwable $e) {
-    send_json(['error' => 'Database connection failed', 'details' => $e->getMessage()], 500);
-}
-
-// ===================== ROUTING CORE =====================
-$method = $_SERVER['REQUEST_METHOD'];
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
-$scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-if ($scriptDir !== '' && $scriptDir !== '/') {
-    $uri = preg_replace('#^' . preg_quote($scriptDir, '#') . '#', '', $uri);
-}
-$uri = '/' . ltrim($uri, '/');
-$segments = array_values(array_filter(explode('/', $uri), fn($s) => $s !== ''));
+$pdo = init_db();
 
 // ===================== HELPERS =====================
 /** Table/meet order: rely on races.id ASC everywhere */
@@ -224,7 +197,7 @@ function buildFinalFromHeats(array $heatsAssoc, int $tiePrecisionDp = 2): ?array
     }
     unset($row);
 
-   usort($flat, function ($a, $b) {
+    usort($flat, function ($a, $b) {
         $pa = $a['place']; $pb = $b['place'];
         if ($pa === null && $pb === null) return 0;
         if ($pa === null) return 1;      // nulls last
@@ -464,135 +437,148 @@ function replaceResultsSet(PDO $pdo, int $raceId, int $heat, array $items): arra
     return fetchResultsByRace($pdo, $raceId);
 }
 
-// ===================== ROUTES =====================
-try {
-    // GET /races
-    if ($method === 'GET' && $segments === ['races']) {
-        send_json(['data' => fetchRaces($pdo)]);
+
+if (!defined('INSIDE_API_INCLUDE')) {
+    // ===================== ROUTING CORE =====================
+    $method = $_SERVER['REQUEST_METHOD'];
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    if ($scriptDir !== '' && $scriptDir !== '/') {
+        $uri = preg_replace('#^' . preg_quote($scriptDir, '#') . '#', '', $uri);
     }
+    $uri = '/' . ltrim($uri, '/');
+    $segments = array_values(array_filter(explode('/', $uri), fn($s) => $s !== ''));
 
-    // GET /races/{id}
-    if ($method === 'GET' && count($segments) === 2 && $segments[0] === 'races') {
-        $raceId = (int)$segments[1];
-        if ($raceId <= 0) send_json(['error' => 'Invalid raceId'], 400);
-        $race = fetchRace($pdo, $raceId);
-        if (!$race) send_json(['error' => 'Race not found'], 404);
-        send_json(['data' => $race]);
-    }
+    // ===================== ROUTES =====================
+    try {
+        // GET /races
+        if ($method === 'GET' && $segments === ['races']) {
+            send_json(fetchRaces($pdo));
+        }
 
-    // POST /results  (replace a heat; respond with race + heats + optional final)
-    if ($method === 'POST' && $segments === ['results']) {
-        $body   = read_json_body();
-        $raceId = isset($body['raceId']) ? (int)$body['raceId'] : 0;
-        $heat   = isset($body['heat'])   ? (int)$body['heat']   : 0;
-        $items  = isset($body['results']) && is_array($body['results']) ? $body['results'] : null;
+        // GET /races/{id}
+        if ($method === 'GET' && count($segments) === 2 && $segments[0] === 'races') {
+            $raceId = (int)$segments[1];
+            if ($raceId <= 0) send_json(['error' => 'Invalid raceId'], 400);
+            $race = fetchRace($pdo, $raceId);
+            if (!$race) send_json(['error' => 'Race not found'], 404);
+            send_json($race);
+        }
 
-        if ($raceId <= 0) send_json(['error' => 'raceId is required and must be > 0'], 400);
-        if ($heat <= 0)   send_json(['error' => 'heat is required and must be > 0'], 400);
-        if ($items === null) send_json(['error' => 'results array is required (can be empty to clear)'], 400);
+        // POST /results  (replace a heat; respond with race + heats + optional final)
+        if ($method === 'POST' && $segments === ['results']) {
+            $body   = read_json_body();
+            $raceId = isset($body['raceId']) ? (int)$body['raceId'] : 0;
+            $heat   = isset($body['heat'])   ? (int)$body['heat']   : 0;
+            $items  = isset($body['results']) && is_array($body['results']) ? $body['results'] : null;
 
-        $race = fetchRace($pdo, $raceId);
-        if (!$race) send_json(['error' => 'Race not found'], 404);
+            if ($raceId <= 0) send_json(['error' => 'raceId is required and must be > 0'], 400);
+            if ($heat <= 0)   send_json(['error' => 'heat is required and must be > 0'], 400);
+            if ($items === null) send_json(['error' => 'results array is required (can be empty to clear)'], 400);
 
-        if (empty($items)) {
-            // Clear the heat
+            $race = fetchRace($pdo, $raceId);
+            if (!$race) send_json(['error' => 'Race not found'], 404);
+
+            if (empty($items)) {
+                // Clear the heat
+                $pdo->beginTransaction();
+                try {
+                    $pdo->prepare(
+                        "DELETE rc FROM results_clubs rc
+                        JOIN results r ON r.id = rc.resultId
+                        WHERE r.raceId = :r AND r.heat = :h"
+                    )->execute([':r' => $raceId, ':h' => $heat]);
+                    $pdo->prepare("DELETE FROM results WHERE raceId = :r AND heat = :h")
+                        ->execute([':r' => $raceId, ':h' => $heat]);
+                    $pdo->commit();
+                } catch (Throwable $e) {
+                    $pdo->rollBack();
+                    throw $e;
+                }
+                $heats = fetchResultsByRace($pdo, $raceId);
+            } else {
+                $heats = replaceResultsSet($pdo, $raceId, $heat, $items);
+            }
+
+            $resp = ['race' => $race, 'heats' => $heats];
+            // if (count($heats) >= 2) {
+                $final = finalFromHeatsArray($heats);
+                if ($final !== null) $resp['final'] = $final;
+            // }
+            send_json($resp, 201);
+        }
+
+        // GET /results/{raceId}  (grouped by heat + final across all heats)
+        if ($method === 'GET' && count($segments) === 2 && $segments[0] === 'results') {
+            $raceId = (int)$segments[1];
+            if ($raceId <= 0) send_json(['error' => 'Invalid raceId'], 400);
+            $race = fetchRace($pdo, $raceId);
+            if (!$race) send_json(['error' => 'Race not found'], 404);
+
+            $heats = fetchResultsByRace($pdo, $raceId);
+            $resp = ['race' => $race, 'heats' => $heats];
+            // if (count($heats) >= 2) {
+                $final = finalFromHeatsArray($heats);
+                if ($final !== null) $resp['final'] = $final;
+            // }
+            send_json($resp);
+        }
+
+        // DELETE /results/{raceId}/{heat}
+        if ($method === 'DELETE' && count($segments) === 3 && $segments[0] === 'results') {
+            $raceId = (int)$segments[1];
+            $heat   = (int)$segments[2];
+            if ($raceId <= 0 || $heat <= 0) send_json(['error' => 'Invalid raceId or heat'], 400);
+
+            $race = fetchRace($pdo, $raceId);
+            if (!$race) send_json(['error' => 'Race not found'], 404);
+
             $pdo->beginTransaction();
             try {
                 $pdo->prepare(
                     "DELETE rc FROM results_clubs rc
-                     JOIN results r ON r.id = rc.resultId
-                     WHERE r.raceId = :r AND r.heat = :h"
+                    JOIN results r ON r.id = rc.resultId
+                    WHERE r.raceId = :r AND r.heat = :h"
                 )->execute([':r' => $raceId, ':h' => $heat]);
-                $pdo->prepare("DELETE FROM results WHERE raceId = :r AND heat = :h")
-                    ->execute([':r' => $raceId, ':h' => $heat]);
+
+                $del = $pdo->prepare("DELETE FROM results WHERE raceId = :r AND heat = :h");
+                $del->execute([':r' => $raceId, ':h' => $heat]);
+
                 $pdo->commit();
+                $deleted = $del->rowCount();
             } catch (Throwable $e) {
                 $pdo->rollBack();
                 throw $e;
             }
-            $heats = fetchResultsByRace($pdo, $raceId);
-        } else {
-            $heats = replaceResultsSet($pdo, $raceId, $heat, $items);
+
+            send_json(['deleted' => $deleted, 'race' => $race, 'heat' => $heat]);
         }
 
-        $resp = ['race' => $race, 'heats' => $heats];
-        // if (count($heats) >= 2) {
-            $final = finalFromHeatsArray($heats);
-            if ($final !== null) $resp['final'] = $final;
-        // }
-        send_json(['data' => $resp], 201);
-    }
-
-    // GET /results/{raceId}  (grouped by heat + final across all heats)
-    if ($method === 'GET' && count($segments) === 2 && $segments[0] === 'results') {
-        $raceId = (int)$segments[1];
-        if ($raceId <= 0) send_json(['error' => 'Invalid raceId'], 400);
-        $race = fetchRace($pdo, $raceId);
-        if (!$race) send_json(['error' => 'Race not found'], 404);
-
-        $heats = fetchResultsByRace($pdo, $raceId);
-        $resp = ['race' => $race, 'heats' => $heats];
-        // if (count($heats) >= 2) {
-            $final = finalFromHeatsArray($heats);
-            if ($final !== null) $resp['final'] = $final;
-        // }
-        send_json(['data' => $resp]);
-    }
-
-    // DELETE /results/{raceId}/{heat}
-    if ($method === 'DELETE' && count($segments) === 3 && $segments[0] === 'results') {
-        $raceId = (int)$segments[1];
-        $heat   = (int)$segments[2];
-        if ($raceId <= 0 || $heat <= 0) send_json(['error' => 'Invalid raceId or heat'], 400);
-
-        $race = fetchRace($pdo, $raceId);
-        if (!$race) send_json(['error' => 'Race not found'], 404);
-
-        $pdo->beginTransaction();
-        try {
-            $pdo->prepare(
-                "DELETE rc FROM results_clubs rc
-                 JOIN results r ON r.id = rc.resultId
-                 WHERE r.raceId = :r AND r.heat = :h"
-            )->execute([':r' => $raceId, ':h' => $heat]);
-
-            $del = $pdo->prepare("DELETE FROM results WHERE raceId = :r AND heat = :h");
-            $del->execute([':r' => $raceId, ':h' => $heat]);
-
-            $pdo->commit();
-            $deleted = $del->rowCount();
-        } catch (Throwable $e) {
-            $pdo->rollBack();
-            throw $e;
+        // GET /results  (all races, heats + final)
+        if ($method === 'GET' && $segments === ['results']) {
+            $data = fetchAllResultsGrouped($pdo);
+            send_json($data);
         }
 
-        send_json(['data' => ['deleted' => $deleted, 'race' => $race, 'heat' => $heat]]);
+        // GET /clubs  (optional ?q= substring filter)
+        if ($method === 'GET' && $segments === ['clubs']) {
+            // Use $_GET['q'] if present; already CORS+JSON headers are set globally
+            $q = isset($_GET['q']) ? (string)$_GET['q'] : null;
+            $clubs = fetchClubs($pdo, $q);
+            send_json($clubs);
+        }
+
+        // Fallback
+        send_json([
+            'error' => 'Not found',
+            'hint'  => 'Try GET /races, GET /races/{id}, POST /results, GET /results/{raceId}, DELETE /results/{raceId}/{heat}, GET /results'
+        ], 404);
+
+    } catch (InvalidArgumentException $e) {
+        send_json(['error' => $e->getMessage()], 400);
+    } catch (PDOException $e) {
+        send_json(['error' => 'Database error', 'details' => $e->getMessage()], 500);
+    } catch (Throwable $e) {
+        send_json(['error' => 'Unexpected error', 'details' => $e->getMessage()], 500);
     }
-
-    // GET /results  (all races, heats + final)
-    if ($method === 'GET' && $segments === ['results']) {
-        $data = fetchAllResultsGrouped($pdo);
-        send_json(['data' => $data]);
-    }
-
-    // GET /clubs  (optional ?q= substring filter)
-    if ($method === 'GET' && $segments === ['clubs']) {
-        // Use $_GET['q'] if present; already CORS+JSON headers are set globally
-        $q = isset($_GET['q']) ? (string)$_GET['q'] : null;
-        $clubs = fetchClubs($pdo, $q);
-        send_json(['data' => $clubs]);
-    }
-
-    // Fallback
-    send_json([
-        'error' => 'Not found',
-        'hint'  => 'Try GET /races, GET /races/{id}, POST /results, GET /results/{raceId}, DELETE /results/{raceId}/{heat}, GET /results'
-    ], 404);
-
-} catch (InvalidArgumentException $e) {
-    send_json(['error' => $e->getMessage()], 400);
-} catch (PDOException $e) {
-    send_json(['error' => 'Database error', 'details' => $e->getMessage()], 500);
-} catch (Throwable $e) {
-    send_json(['error' => 'Unexpected error', 'details' => $e->getMessage()], 500);
 }
