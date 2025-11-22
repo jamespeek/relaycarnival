@@ -28,7 +28,7 @@ The following environment variables must exist in `.env`
 EVENT_NAME=Relay Carnival 20xx-xx
 
 JSON_URL=https://abc.com/data.php // private admin server URL to grab JSON from
-SYNC_KEY=relaycarnivalsync // magic key to use for triggering sync of JSON file via JSON_URL
+SYNC_KEY=relaycarnivalsync        // magic key to use for triggering sync of JSON file via JSON_URL
 
 DB_HOST=x.x.x.x
 DB_NAME=relaycarnival
@@ -36,5 +36,5 @@ DB_USERNAME=relaycarnival
 DB_PASSWORD=xxxxx
 DB_CHARSET=utf8mb4
 
-GTAG=G-xxxxxxxxxx // Google analytics tag
+GTAG=G-xxxxxxxxxx                 // Google analytics tag
 ```
