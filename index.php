@@ -2,7 +2,7 @@
 
 include_once 'utils.php';
 
-if (hash_equals(getenv('SYNC_KEY'), $_GET['refresh'] ?? '') || $_SERVER['SERVER_NAME'] == 'dev.peek.net.au') {
+if (hash_equals(getenv('SYNC_KEY'), $_GET['refresh'] ?? '') || $_SERVER['SERVER_NAME'] == parse_url(getenv('JSON_URL'), PHP_URL_HOST)) {
     $json = file_get_contents(getenv('JSON_URL'));
     file_put_contents('data/results.json', $json);
 }
