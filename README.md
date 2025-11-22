@@ -7,14 +7,14 @@
 * `utils.php` Variety of env, string and database utilities that are used between files.
 * `results.php` Single page entry results screen.
 * `api/index.php` Provides HTTP/REST access to the various GET/POST/DELETE endpoints to interact with the database.
-* `api/.htaccess` Allows `./api/xxx` to remap incoming calls to `index.php` for the various endpoints.
+* `api/.htaccess` Allows `./api/results` and `./api/races` etc to remap incoming HTTP calls to `index.php` for the various endpoints.
 * `db/` Database scripts for recreating the database and injecting the required races.
 * `data/` Stores the generates JSON file as well as an export of the Capital Athletic relay records.
 * `assets/` Stores images.
 
 ## Deployment model
 
-`index.php`, `utils.php`, and `.env` plus `./assets` and `./data` directories on public facing web server (no database)
+`index.php`, `utils.php`, and `.env` plus `./assets` and `./data` directories on public facing web server (no database). Currently this is https://relaycarnival.capitalathletics.au
 
 All files also exist on non-advertised/protected web server for data entry via API + database. 
 
@@ -27,8 +27,8 @@ The following environment variables must exist in `.env`
 ```
 EVENT_NAME=Relay Carnival 20xx-xx
 
-JSON_URL=https://xxxx/data.php
-SYNC_KEY=relaycarnivalsync
+JSON_URL=https://xxxx/data.php // private admin server URL to grab JSON from
+SYNC_KEY=relaycarnivalsync // magic key to use for triggering sync of JSON file via JSON_URL
 
 DB_HOST=x.x.x.x
 DB_NAME=relaycarnival
