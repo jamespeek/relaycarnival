@@ -105,6 +105,15 @@ $data = json_decode(file_get_contents('data/results.json'), true);
                         font-size: 1rem;
                     }
                 }
+
+                .has-record {
+                    color: rgba(var(--bs-warning-rgb));
+                    display: none;
+                }
+            }
+
+             &:has(.badge.record) .has-record {
+                display: block;
             }
 
             &:not(.completed) h3 {
@@ -237,22 +246,23 @@ foreach ($data['events'] as $i => $event) {
 
     echo '<h3>';
     echo '<div class="row">';
-    echo '<div class="col d-flex align-items-center gap-2">';
+    echo '<div class="col d-flex align-items-center gap-1">';
     echo $event['name'];
     if ($completed) {
-        echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-success" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="m10.6 16.6l7.05-7.05l-1.4-1.4l-5.65 5.65l-2.85-2.85l-1.4 1.4zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>';
+        echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-success" viewBox="0 0 24 24"><path fill="currentColor" d="m10.6 16.6l7.05-7.05l-1.4-1.4l-5.65 5.65l-2.85-2.85l-1.4 1.4zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>';
     } else if ($lastCompleted) {
-        echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-muted" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M7 13.5q.625 0 1.063-.437T8.5 12t-.437-1.062T7 10.5t-1.062.438T5.5 12t.438 1.063T7 13.5m5 0q.625 0 1.063-.437T13.5 12t-.437-1.062T12 10.5t-1.062.438T10.5 12t.438 1.063T12 13.5m5 0q.625 0 1.063-.437T18.5 12t-.437-1.062T17 10.5t-1.062.438T15.5 12t.438 1.063T17 13.5M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>';
+        echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-muted" viewBox="0 0 24 24"><path fill="currentColor" d="M7 13.5q.625 0 1.063-.437T8.5 12t-.437-1.062T7 10.5t-1.062.438T5.5 12t.438 1.063T7 13.5m5 0q.625 0 1.063-.437T13.5 12t-.437-1.062T12 10.5t-1.062.438T10.5 12t.438 1.063T12 13.5m5 0q.625 0 1.063-.437T18.5 12t-.437-1.062T17 10.5t-1.062.438T15.5 12t.438 1.063T17 13.5M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>';
     }
+    echo ' <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="has-record" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M19 15q.3-.3.713-.3t.712.3L22 16.6q.3.3.3.7t-.3.7t-.7.3t-.7-.3L19 16.425q-.3-.3-.3-.712T19 15m1-12q.3.3.3.713t-.3.712L18.425 6q-.3.3-.712.3T17 6t-.3-.712t.3-.713L18.6 3q.3-.3.7-.3t.7.3M4 3q.3-.3.713-.3t.712.3L7 4.6q.3.3.3.7T7 6t-.712.3t-.713-.3L4 4.425q-.3-.3-.3-.712T4 3m1 12q.3.3.3.713t-.3.712L3.425 18q-.3.3-.712.3T2 18t-.3-.712t.3-.713L3.6 15q.3-.3.7-.3t.7.3m7 2.275l-4.15 2.5q-.275.175-.575.15t-.525-.2t-.35-.437t-.05-.588l1.1-4.725L3.775 10.8q-.25-.225-.312-.513t.037-.562t.3-.45t.55-.225l4.85-.425l1.875-4.45q.125-.3.388-.45t.537-.15t.537.15t.388.45l1.875 4.45l4.85.425q.35.05.55.225t.3.45t.038.563t-.313.512l-3.675 3.175l1.1 4.725q.075.325-.05.588t-.35.437t-.525.2t-.575-.15z"/></svg>';
     echo '</div>';
     echo '<div class="col-auto fw-normal">';
     if (isset($event['record'])) {
-        echo $event['record']['value'];
-        echo ' <span class="year">(';
+        echo '<span class="year">';
+        // echo '<span class="d-inline d-md-none text-uppercase">' . substr($event['record']['club'], 0, 3) . '</span>';
         echo '<span class="d-none d-md-inline">' . $event['record']['club'] . '</span>';
-        echo '<span class="d-inline d-md-none text-uppercase">' . substr($event['record']['club'], 0, 3) . '</span>';
         echo ' ' . $event['record']['year'];
-        echo ')</span>';
+        echo '</span>: ';
+        echo $event['record']['value'];
     }
     echo '</div>';
     echo '</div>';
@@ -276,7 +286,7 @@ foreach ($data['events'] as $i => $event) {
                     
                     if (isset($result['time'])) {
                         if (isset($result['record'])) {
-                            echo '<div class="col-auto"><span class="badge text-bg-warning">';
+                            echo '<div class="col-auto"><span class="badge record text-bg-warning">';
                         } else {
                             echo '<div class="col-auto"><span class="badge text-bg-light">';
                         }
@@ -301,7 +311,7 @@ foreach ($data['events'] as $i => $event) {
 
             if (isset($result['time'])) {
                 if (isset($result['record'])) {
-                    echo '<div class="col-auto"><span class="badge text-bg-warning">';
+                    echo '<div class="col-auto"><span class="badge record text-bg-warning">';
                 } else {
                     echo '<div class="col-auto"><span class="badge text-bg-light">';
                 }
