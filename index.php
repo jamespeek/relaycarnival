@@ -370,6 +370,10 @@ foreach ($data['events'] as $i => $event) {
 
 ?>
 
+<div class="small alert alert-light mt-3">
+    1. Hand-timed events are rounded up to the next tenth of a second.
+</div>
+
 </main>
 
 <footer>

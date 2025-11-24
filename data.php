@@ -34,6 +34,22 @@ $clubsScore = [];
 
 $heatLetters = ['A', 'B', 'C'];
 
+function adjustTime($time, $age) {
+    if ($age != 'Open' && (int)str_replace('U', '', $age) < 13) {
+        $time = ceil($time * 10) / 10;
+    }
+
+    return $time;
+}
+
+function adjustFormatTime($time, $age) {
+    if ($age != 'Open' && (int)str_replace('U', '', $age) < 13) {
+        return formatTime(adjustTime($time, $age)) . '¹';
+    }
+
+    return formatTime($time);
+}
+
 foreach ($results as $counter => $raceBlock) {
     if (!isset($raceBlock['race'])) continue;
 
@@ -59,11 +75,6 @@ foreach ($results as $counter => $raceBlock) {
     $eventName = $age . ' ' . $gender . ' ' . $race['event'];
 
     $raceClubs = [];
-
-    $timeAdjustment = 0;
-    if ($age != 'Open' && (int)str_replace('U', '', $age) < 13) {
-        $timeAdjustment = .24;
-    }
 
     $eventObj = [
         'name' => '#' . ($counter + 1) . ': ' . $eventName,
@@ -107,9 +118,9 @@ foreach ($results as $counter => $raceBlock) {
                     $resultObj['clubs'] = formatClubList($clubs);
 
                     if ($result['time']) {
-                        $resultObj['time'] = formatTime($result['time'] + $timeAdjustment);
+                        $resultObj['time'] = adjustFormatTime($result['time'], $age);
 
-                        if (isset($recordsMap[$eventName]) && $result['time'] <= $recordsMap[$eventName]['record']) {
+                        if (isset($recordsMap[$eventName]) && adjustTime($result['time'], $age) <= $recordsMap[$eventName]['record']) {
                             $resultObj['record'] = true;
                         }
                     }
@@ -133,9 +144,9 @@ foreach ($results as $counter => $raceBlock) {
 				$resultObj['clubs'] = formatClubList($clubs);
 
 				if ($result['time']) {
-					$resultObj['time'] = formatTime($result['time'] + $timeAdjustment);
+					$resultObj['time'] = adjustFormatTime($result['time'], $age);
 
-					if (isset($recordsMap[$eventName]) && $result['time'] <= $recordsMap[$eventName]['record']) {
+					if (isset($recordsMap[$eventName]) && adjustTime($result['time'], $age) <= $recordsMap[$eventName]['record']) {
 						$resultObj['record'] = true;
 					}
 				}
